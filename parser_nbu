@@ -1,0 +1,49 @@
+import urllib.request
+from bs4 import BeautifulSoup
+
+
+BASE_URL = "https://bank.gov.ua/control/uk/publish/category?cat_id=55838&page=1"
+
+def get_html(url):
+    response = urllib.request.urlopen(url)
+    return response.read()
+#создаем счетчик страниц:
+def get_page_count(html):
+    soup = BeautifulSoup(html,'lxml')
+    last_link = soup.find('td', class_='nav').find_all('a')[-1:]
+    for href in last_link:
+        paggination = href.get('href').split('=')
+    return int(paggination[-1])
+
+
+def parse(html):
+    soup = BeautifulSoup(html,'lxml')
+    table = soup.find('div',class_='announces_block')
+
+    projects = []
+
+    for row in table.find_all('tr')[2:]:
+        cols = row.find_all('td')
+
+        projects.append({
+            'Date': cols[0].div.get_text().strip(),
+            'Announces': cols[0].a.get_text().strip(),
+        })
+    for project in projects:
+        return projects
+
+def main():
+    page_count = get_page_count(get_html(BASE_URL))
+    print('всего найдено страниц %d'% page_count)
+
+    projects = []
+
+    for page in range (1, page_count):
+        print ('Парсинг %d%%'%(page/page_count*100))
+        projects.extend(parse(get_html(BASE_URL + '?page=%d' % page)))
+
+    for project in projects:
+        print(project)
+
+if __name__=='__main__':
+    main()
